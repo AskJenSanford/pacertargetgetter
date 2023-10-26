@@ -1,8 +1,8 @@
+from .models import Address
 from rest_framework import serializers
-from .models import Case
 
 
-class CaseSerializer(serializers.ModelSerializer):
+class AddressSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Case
-        fields = ('case_number',)
+        model = Address
+        fields = ('case_number', 'address')

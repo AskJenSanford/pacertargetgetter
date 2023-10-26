@@ -1,10 +1,8 @@
-import csv
 import time
 import scrapy
 import requests
 from selenium.webdriver import Chrome
 from selenium.webdriver.common.by import By
-
 
 case_number_urls = list()
 
@@ -16,46 +14,58 @@ class PacerScraper:
         self.session_cookies = None
 
     def login(self):
-        self.driver.get("https://pacer.login.uscourts.gov/csologin/login.jsf?appurl=https://pcl.uscourts.gov/pcl/loginCompletion")
-        # self.driver.find_element(By.ID, "j_idt140").click()
-        time.sleep(2)
-        self.driver.find_element(By.ID, "loginForm:loginName").send_keys("hersanford")
-        self.driver.find_element(By.ID, "loginForm:password").send_keys("tybdi3-tijsEp-tukmot")
-        self.driver.find_element(By.ID, "loginForm:fbtnLogin").click()
-        time.sleep(2)
+        try:
+            self.driver.get(
+                "https://pacer.login.uscourts.gov/csologin/login.jsf?appurl=https://pcl.uscourts.gov/pcl/loginCompletion")
+            time.sleep(2)
+            self.driver.find_element(By.ID, "loginForm:loginName").send_keys("hersanford")
+            self.driver.find_element(By.ID, "loginForm:password").send_keys("tybdi3-tijsEp-tukmot")
+            self.driver.find_element(By.ID, "loginForm:fbtnLogin").click()
+            time.sleep(2)
 
-        self.driver.find_element(By.ID, "regmsg:chkRedact").click()
-        time.sleep(2)
+            self.driver.find_element(By.ID, "regmsg:chkRedact").click()
+            time.sleep(2)
 
-        self.driver.find_element(By.ID, "regmsg:bpmConfirm").click()
+            self.driver.find_element(By.ID, "regmsg:bpmConfirm").click()
+        except Exception as e:
+            print(f"An error occurred during login: {str(e)}")
 
     def case_search(self, case_number=''):
-        self.driver.find_element(By.ID, "frmSearch:txtCaseNumber").send_keys(case_number)
-        self.driver.find_element(By.ID, "frmSearch:btnSearch").click()
+        try:
+            self.driver.find_element(By.ID, "frmSearch:txtCaseNumber").send_keys(case_number)
+            self.driver.find_element(By.ID, "frmSearch:btnSearch").click()
+        except Exception as e:
+            print(f"An error occurred during case search: {str(e)}")
 
     def parse_case(self, case_number="", page_source=''):
-        selector = scrapy.Selector(text=page_source)
-        for url in selector.css(
-                'tbody[id="frmSearch:caseTable_data"] > tr > td:nth-child(7) > a.ui-link::attr(href)').getall():
+        try:
+            selector = scrapy.Selector(text=page_source)
+            for url in selector.css(
+                    'tbody[id="frmSearch:caseTable_data"] > tr > td:nth-child(7) > a.ui-link::attr(href)').getall():
 
-            if url:
-                case_number_urls.append(url)
+                if url:
+                    case_number_urls.append(url)
+        except Exception as e:
+            print(f"An error occurred while parsing the case: {str(e)}")
 
         return case_number_urls
 
     def start_driver(self, case_number):
-        self.driver = Chrome()
-        self.login()
-        time.sleep(2)
-        self.driver.find_element(By.ID, "frmSearch:findCasesAdvanced").click()
-        self.case_search(case_number=case_number)
+        try:
+            self.driver = Chrome()
+            self.login()
+            time.sleep(2)
+            self.driver.find_element(By.ID, "frmSearch:findCasesAdvanced").click()
+            self.case_search(case_number=case_number)
 
-        time.sleep(3)
-        webdriver_cookies = self.driver.get_cookies()
-        for cookie in webdriver_cookies:
-            self.request_session.cookies.set(cookie['name'], cookie['value'])
+            time.sleep(3)
+            webdriver_cookies = self.driver.get_cookies()
+            for cookie in webdriver_cookies:
+                self.request_session.cookies.set(cookie['name'], cookie['value'])
 
-        page_source = self.driver.page_source
-        self.driver.quit()
-        case_numbers = self.parse_case(case_number=case_number, page_source=page_source)
-        return case_numbers
+            page_source = self.driver.page_source
+            self.driver.quit()
+            case_numbers = self.parse_case(case_number=case_number, page_source=page_source)
+            return case_numbers
+        except Exception as e:
+            print(f"An error occurred during the scraping process: {str(e)}")

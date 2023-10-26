@@ -1,24 +1,27 @@
 import os
 import time
 import scrapy
+from ..models import Address
+from django.conf import settings
 from urllib.parse import urljoin
 from selenium.webdriver import Chrome
 from selenium.webdriver.common.by import By
 from .pdf_processing import PDFImageProcessor
 from selenium.webdriver.chrome.options import Options
 
-
+pdf_directory = os.path.join(settings.BASE_DIR, "casepdf")
 
 class PdfData:
     def __init__(self):
         self.chrome_options = Options()
         self.chrome_options.add_experimental_option("prefs", {
-            "download.default_directory": r"D:/pacer/pacer_scraper/casepdf",
+            "download.default_directory": pdf_directory,
             "download.prompt_for_download": False,
             "download.directory_upgrade": True,
             "plugins.always_open_pdf_externally": True
         })
         self.driver = None
+        self.addresses = list()
 
     def login(self):
         self.driver.get(
@@ -40,7 +43,6 @@ class PdfData:
             self.login()
             time.sleep(5)
 
-            # df = pd.read_csv('case_file.csv')
             urls = set(case_number_urls)
 
             for url in urls:
@@ -60,13 +62,28 @@ class PdfData:
                             self.driver.get(pdf_file_url)
                             self.driver.find_element(By.PARTIAL_LINK_TEXT, "Continue").click()
                             self.driver.find_element(By.CSS_SELECTOR, 'input[value="View Document"]').click()
-                            time.sleep(5)
+                            max_wait_time = 100
 
-                            pdfimage = PDFImageProcessor(file_number=pdf_id, case_number=case_number)
-                            pdfimage.start_pdf()
+                            check_interval = 15
 
-            time.sleep(10)
-        except Exception as e:
-            print(e)
-        finally:
+                            start_time = time.time()
+                            file_path = os.path.join(pdf_directory, f"{pdf_id}.pdf")
+                            while not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
+                                if time.time() - start_time > max_wait_time:
+                                    break
+                                time.sleep(check_interval)
+
+                            if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                                pdfimage = PDFImageProcessor(file_number=pdf_id)
+                                address_list = pdfimage.start_pdf()
+                                self.addresses.extend(address_list)
+
             self.driver.quit()
+            Address(case_number=case_number, address=self.addresses).save()
+            print(f"Insert address of {case_number}.")
+
+        except Exception as e:
+            print(f"An error occurred while scraping PDF data: {str(e)}")
+        finally:
+            if self.driver:
+                self.driver.quit()
