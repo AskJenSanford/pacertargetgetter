@@ -3,17 +3,21 @@ import shutil
 import threading
 from django.conf import settings
 from .models import Address, Status
+from rest_framework import viewsets
 from .scraper.pdf_data import PdfData
 from .scraper.pacer import PacerScraper
-from rest_framework.views import APIView
+from .serializers import AddressSerializer
 from rest_framework.response import Response
 
 scraper = PacerScraper()
 pdfdata = PdfData()
 
 
-class CaseNumberView(APIView):
-    def post(self, request):
+class CaseNumberView(viewsets.ModelViewSet):
+    queryset = Address.objects.all()
+    serializer_class = AddressSerializer
+
+    def create(self, request, **kwargs):
         case_number = request.data.get('case_number')
         check_status = Status.objects.filter(case_number=case_number).values_list("status", flat=True)
         status = None
@@ -55,11 +59,24 @@ class CaseNumberView(APIView):
             except Address.DoesNotExist:
                 return Response({'received_case_number': case_number, 'address': 'Address not found'})
         except Exception as e:
-            status = Status.objects.get(case_number=case_number)
-            status.status = "ERROR"
-            status.save()
+            if status:
+                status.delete()
             return Response({'error': f"An error occurred: {str(e)}"}, status=500)
 
     def delete_folder(self):
         folder_path = os.path.join(settings.BASE_DIR, "casepdf")
         shutil.rmtree(folder_path)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        case_number = instance.case_number
+
+        try:
+            status = Status.objects.get(case_number=case_number)
+        except Status.DoesNotExist:
+            return Response({'message': 'Status not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        status.delete()
+        instance.delete()
+
+        return Response({'message': 'Address and status deleted'})

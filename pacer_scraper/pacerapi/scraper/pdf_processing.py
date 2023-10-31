@@ -27,7 +27,7 @@ class PDFImageProcessor:
             if len(self.images_list) == 0:
                 raise ValueError(f'No images found in {self.file_path}')
         except Exception as e:
-            print(f"An error occurred while extracting images: {str(e)}")
+            raise Exception(f"An error occurred while extracting images: {str(e)}")
 
     def process_images(self):
         try:
@@ -50,7 +50,7 @@ class PDFImageProcessor:
                     if address:
                         self.addresses.append(address)
         except Exception as e:
-            print(f"An error occurred while processing images: {str(e)}")
+            raise Exception(f"An error occurred while processing images: {str(e)}")
 
     def start_pdf(self):
         try:
@@ -59,7 +59,7 @@ class PDFImageProcessor:
             self.pdf_file.close()
             return self.addresses
         except Exception as e:
-            print(f"An error occurred during PDF processing: {str(e)}")
+            raise Exception(f"An error occurred during PDF processing: {str(e)}")
 
 
 def cropped_image(imgage_path, mid=True):
@@ -73,7 +73,7 @@ def cropped_image(imgage_path, mid=True):
         img2 = img.crop(box)
         img2.save('myimage_cropped.png')
     except Exception as e:
-        print(f"An error occurred while cropping the image: {str(e)}")
+        raise Exception(f"An error occurred while cropping the image: {str(e)}")
 
 
 def ocr_result(image_path="myimage_cropped.png", mid=True):
@@ -92,4 +92,4 @@ def ocr_result(image_path="myimage_cropped.png", mid=True):
                 address = text.split("Sincerely")[-1].strip().lstrip(',')
         return address
     except Exception as e:
-        print(f"An error occurred during OCR: {str(e)}")
+        raise Exception(f"An error occurred during OCR: {str(e)}")

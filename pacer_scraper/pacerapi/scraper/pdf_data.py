@@ -11,6 +11,7 @@ from selenium.webdriver.chrome.options import Options
 
 pdf_directory = os.path.join(settings.BASE_DIR, "casepdf")
 
+
 class PdfData:
     def __init__(self):
         self.chrome_options = Options()
@@ -20,22 +21,32 @@ class PdfData:
             "download.directory_upgrade": True,
             "plugins.always_open_pdf_externally": True
         })
+
+        self.chrome_options.add_argument('--headless=new')
+        self.chrome_options.add_argument("start-maximized")
+        self.chrome_options.add_argument("disable-infobars")
+        self.chrome_options.add_argument("--disable-extensions")
+        self.chrome_options.add_argument("--disable-dev-shm-usage")
+        self.chrome_options.add_argument("--no-sandbox")
         self.driver = None
         self.addresses = list()
 
     def login(self):
-        self.driver.get(
-            "https://pacer.login.uscourts.gov/csologin/login.jsf?appurl=https://pcl.uscourts.gov/pcl/loginCompletion")
-        time.sleep(2)
-        self.driver.find_element(By.ID, "loginForm:loginName").send_keys("hersanford")
-        self.driver.find_element(By.ID, "loginForm:password").send_keys("tybdi3-tijsEp-tukmot")
-        self.driver.find_element(By.ID, "loginForm:fbtnLogin").click()
-        time.sleep(2)
+        try:
+            self.driver.get(
+                "https://pacer.login.uscourts.gov/csologin/login.jsf?appurl=https://pcl.uscourts.gov/pcl/loginCompletion")
+            time.sleep(2)
+            self.driver.find_element(By.ID, "loginForm:loginName").send_keys("hersanford")
+            self.driver.find_element(By.ID, "loginForm:password").send_keys("tybdi3-tijsEp-tukmot")
+            self.driver.find_element(By.ID, "loginForm:fbtnLogin").click()
+            time.sleep(2)
 
-        self.driver.find_element(By.ID, "regmsg:chkRedact").click()
-        time.sleep(2)
+            self.driver.find_element(By.ID, "regmsg:chkRedact").click()
+            time.sleep(2)
 
-        self.driver.find_element(By.ID, "regmsg:bpmConfirm").click()
+            self.driver.find_element(By.ID, "regmsg:bpmConfirm").click()
+        except Exception as e:
+            raise Exception(f"An error occurred while parsing the case: {str(e)}")
 
     def scrape_pdf_data(self, case_number, case_number_urls):
         try:
@@ -83,7 +94,7 @@ class PdfData:
             print(f"Insert address of {case_number}.")
 
         except Exception as e:
-            print(f"An error occurred while scraping PDF data: {str(e)}")
+            raise Exception(f"An error occurred while scraping PDF data: {str(e)}")
         finally:
             if self.driver:
                 self.driver.quit()

@@ -1,6 +1,7 @@
 import time
 import scrapy
 import requests
+from selenium import webdriver
 from selenium.webdriver import Chrome
 from selenium.webdriver.common.by import By
 
@@ -12,6 +13,13 @@ class PacerScraper:
         self.driver = None
         self.request_session = requests.Session()
         self.session_cookies = None
+        self.options = webdriver.ChromeOptions()
+        self.options.add_argument('--headless=new')
+        self.options.add_argument("start-maximized")
+        self.options.add_argument("disable-infobars")
+        self.options.add_argument("--disable-extensions")
+        self.options.add_argument("--disable-dev-shm-usage")
+        self.options.add_argument("--no-sandbox")
 
     def login(self):
         try:
@@ -28,14 +36,14 @@ class PacerScraper:
 
             self.driver.find_element(By.ID, "regmsg:bpmConfirm").click()
         except Exception as e:
-            print(f"An error occurred during login: {str(e)}")
+            raise Exception(f"An error occurred during login: {str(e)}")
 
     def case_search(self, case_number=''):
         try:
             self.driver.find_element(By.ID, "frmSearch:txtCaseNumber").send_keys(case_number)
             self.driver.find_element(By.ID, "frmSearch:btnSearch").click()
         except Exception as e:
-            print(f"An error occurred during case search: {str(e)}")
+            raise Exception(f"An error occurred during case search: {str(e)}")
 
     def parse_case(self, case_number="", page_source=''):
         try:
@@ -46,13 +54,14 @@ class PacerScraper:
                 if url:
                     case_number_urls.append(url)
         except Exception as e:
-            print(f"An error occurred while parsing the case: {str(e)}")
+            raise Exception(f"An error occurred while parsing the case: {str(e)}")
 
         return case_number_urls
 
     def start_driver(self, case_number):
         try:
-            self.driver = Chrome()
+            self.driver = Chrome(options=self.options)
+
             self.login()
             time.sleep(2)
             self.driver.find_element(By.ID, "frmSearch:findCasesAdvanced").click()
@@ -68,4 +77,4 @@ class PacerScraper:
             case_numbers = self.parse_case(case_number=case_number, page_source=page_source)
             return case_numbers
         except Exception as e:
-            print(f"An error occurred during the scraping process: {str(e)}")
+            raise Exception(f"An error occurred during the scraping process: {str(e)}")
